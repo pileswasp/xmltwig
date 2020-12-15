@@ -18,22 +18,16 @@ use vars qw($VERSION);
 $VERSION="0.02";
 
 BEGIN
-{ package # hide from PAUSE
-    XML::XPath::NodeSet;
-  no warnings; # to avoid the "Subroutine sort redefined" message
-  # replace the native sort routine by a Twig'd one
-  sub sort
+{ no strict 'refs';
+  my $package = $XPATH . '::NodeSet';
+  # replace the native sort routine by a Twig'd one...
+  *{"${package}::original_sort"} = \&{"${package}::sort"};
+  no warnings 'redefine'; # to avoid the "Subroutine sort redefined" message
+  *{"${package}::sort"} = sub
     { my $self = CORE::shift;
-      @$self = CORE::sort { $a->node_cmp( $b) } @$self;
-      return $self;
-    }
-
-  package # hide from PAUSE
-    XML::XPathEngine::NodeSet;
-  no warnings; # to avoid the "Subroutine sort redefined" message
-  # replace the native sort routine by a Twig'd one
-  sub sort
-    { my $self = CORE::shift;
+      # ... but use the original when the original expects it
+      return $self->original_sort(@_)
+        unless @$self && $self->[0]->can('node_cmp');
       @$self = CORE::sort { $a->node_cmp( $b) } @$self;
       return $self;
     }
